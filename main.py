@@ -1,12 +1,11 @@
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
-
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from api.file_api import router as file_router
 
-app = FastAPI(title="S3 File API",version= os.getenv('VERSION', "unknown"))
+load_dotenv()
+
+app = FastAPI(title="S3 File API",version= os.getenv('VERSION', "-"))
 
 app.include_router(file_router)
 

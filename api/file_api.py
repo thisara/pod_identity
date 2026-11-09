@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from dto.file_dto import FileDTO
 from service.file_service import FileService, get_file_service
 
@@ -15,7 +15,8 @@ class CreateFileRequest(BaseModel):
 
     content: str = Field(..., min_length=1)
 
-    @validator("file_name")
+    @field_validator("file_name")
+    @classmethod
     def validate_file_name(cls, value):
         value = value.strip()
 
@@ -23,7 +24,7 @@ class CreateFileRequest(BaseModel):
             raise ValueError("file_name cannot be empty!")
 
         if "/" in value or "\\" in value:
-            raise ValueError("file_name must not contain path separators")
+            raise ValueError("Field file_name must not contain path separators.")
 
         return value
 

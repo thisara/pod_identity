@@ -1,47 +1,105 @@
-resource "aws_iam_user" "app_user" {
-  name = "s3-file-user"
+#EKS IAM
+data "aws_iam_policy_document" "eks_cluster_assume_role" {
+  statement {
+    effect = "Allow"
 
-  tags = {
-    Application = "file-api"
-    ManagedBy   = "Terraform"
+    principals {
+      type        = "Service"
+      identifiers = ["eks.amazonaws.com"]
+    }
+
+    actions = [
+      "sts:AssumeRole"
+    ]
   }
 }
 
-resource "aws_iam_policy" "s3_app_policy" {
-  name        = "s3-app-files-policy"
-  description = "Allow application to list, read and write objects"
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "${var.cluster_name}-cluster-role"
 
-  policy = jsonencode({
-    Version = "2012-10-17"
+  path = "/terraform-managed/"
+  #permissions_boundary = "arn:aws:iam::731770490737:policy/terraformProdRole-created-role-boundary"
+  
+  assume_role_policy = data.aws_iam_policy_document.eks_cluster_assume_role.json
 
-    Statement = [
-      {
-        Sid    = "ListBucket"
-        Effect = "Allow"
-
-        Action = [
-          "s3:ListBucket"
-        ]
-
-        Resource = aws_s3_bucket.app_files.arn
-      },
-
-      {
-        Sid    = "ObjectAccess"
-        Effect = "Allow"
-
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject"
-        ]
-
-        Resource = "${aws_s3_bucket.app_files.arn}/*"
-      }
-    ]
-  })
+  tags = var.tags
 }
 
-resource "aws_iam_user_policy_attachment" "app_user_s3" {
-  user       = aws_iam_user.app_user.name
-  policy_arn = aws_iam_policy.s3_app_policy.arn
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role = aws_iam_role.eks_cluster_role.name
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+#EKS WORKER NODES IAM
+data "aws_iam_policy_document" "eks_node_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
+resource "aws_iam_role" "eks_node_role" {
+  name = "${var.cluster_name}-node-role"
+
+  path = "/terraform-managed/"
+  #permissions_boundary = "arn:aws:iam::731770490737:policy/terraformProdRole-created-role-boundary"
+
+  assume_role_policy = data.aws_iam_policy_document.eks_node_assume_role.json
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
+  role = aws_iam_role.eks_node_role.name
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_ecr_policy" {
+  role = aws_iam_role.eks_node_role.name
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly"
+}
+
+# EKS CNI IAM
+data "aws_iam_policy_document" "eks_pod_identity_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["pods.eks.amazonaws.com"]
+    }
+
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
+  }
+}
+
+resource "aws_iam_role" "eks_vpc_cni_role" {
+  name = "${var.cluster_name}-vpc-cni-role"
+
+  path = "/terraform-managed/"
+  #permissions_boundary = "arn:aws:iam::731770490737:policy/terraformProdRole-created-role-boundary"
+
+  assume_role_policy = data.aws_iam_policy_document.eks_pod_identity_assume_role.json
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "eks_vpc_cni_policy" {
+  role = aws_iam_role.eks_vpc_cni_role.name
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }

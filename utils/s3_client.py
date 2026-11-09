@@ -40,7 +40,7 @@ class S3Client:
             )
         )
 
-    def put_object(self, key: str, content: bytes, content_type: str) -> None:
+    def add_object(self, key: str, content: bytes, content_type: str) -> None:
         
         try:
             self.s3.put_object(

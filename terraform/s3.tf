@@ -6,6 +6,10 @@ resource "aws_s3_bucket" "app_files" {
     Environment = "dev"
     ManagedBy   = "Terraform"
   }
+
+#  lifecycle {
+#    prevent_destroy = true
+#  }
 }
 
 resource "aws_s3_bucket_public_access_block" "app_files" {
